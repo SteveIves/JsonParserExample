@@ -1,0 +1,79 @@
+
+namespace JsonParserExample
+
+    public static class Utilities
+
+        ;;; Stores the seed used by GetRandomNumber
+        private static randomSeed, int, 1
+
+        ;;; <summary>
+        ;;; Synergy randm() does not work particularly well when hit with the same
+        ;;; seeds in the same millisecond/second. This method tracks its own random
+        ;;; seed and produces a random number based on seed and time.
+        ;;; </summary>
+        ;;; <returns></returns>
+        public static method GetRandomNumber, int
+            endparams
+            record
+                number, int
+                ctime, int
+            endrecord
+        proc
+            xcall time(ctime)
+            xcall randm(randomSeed, randomSeed, ctime)
+            xcall randm(number, randomSeed, ctime)
+            mreturn number
+        endmethod
+
+        ;;; <summary>
+        ;;; Get a "random" boolean. Just to add flavor to the sample data.
+        ;;; </summary>
+        ;;; <returns>true or false, pseudo-randomly</returns>
+        private static method GetRandomBool, boolean
+            endparams
+            record
+                number, int
+            endrecord
+        proc
+            number = Utilities.GetRandomNumber()
+            mreturn %rnd(number) > 16383
+        endmethod
+
+;        public static method GetIso8601Time, @Iso8601Time
+;            required in aDateTime, @SynergyDateTime
+;            record
+;                result, @Iso8601Time
+;                offset, int
+;            endrecord
+;        proc
+;            result = new Iso8601Time()
+;            result.Year = aDateTime.year
+;            result.Month = aDateTime.month
+;            result.Day = aDateTime.day
+;            result.Hour = aDateTime.hour
+;            result.Minute = aDateTime.minute
+;            result.Second = aDateTime.second
+;            result.Millisecond = aDateTime.millisecond
+;
+;            offset = %timezone
+;
+;            result.offsetPlusMinus = offset >= 0 ? "+" : "-"
+;
+;            if (offset < 0)
+;                offset *= -1
+;
+;            result.offsetHour = offset / 60
+;            result.offsetMinute = offset - (result.offsetHour * 60)
+;
+;            mreturn result
+;
+;        endmethod
+;
+;        public static method GetCurrentIso8601Time, @Iso8601Time
+;        proc
+;            mreturn GetIso8601Time(new SynergyDateTime(%datetime).ToIso8601Time())
+;        endmethod
+
+    endclass
+
+endnamespace

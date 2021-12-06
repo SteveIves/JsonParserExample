@@ -1,0 +1,445 @@
+
+import System.Text
+import System.Text.Json
+
+namespace JsonParserExample
+
+    public class WeatherReport
+
+        public class LocationData
+            public readwrite property City, string
+            public readwrite property Region, string
+            public readwrite property Country, string
+        endclass
+
+        public class TemperatureReport
+            public readwrite property Scale, string
+            public readwrite property CurrentValue, int
+            public readwrite property NextTwelveHours, [#]int
+            public method TemperatureReport
+            proc
+                NextTwelveHours = new int[12]
+            endmethod
+        endclass
+
+        public class HumidityReport
+            public readwrite property Scale, string
+            public readwrite property CurrentValue, int
+            public readwrite property NextTwelveHours, [#]int
+            public method HumidityReport
+            proc
+                NextTwelveHours = new int[12]
+            endmethod
+        endclass
+
+        public class WindData
+            public readwrite property Speed, int
+            public readwrite property FromDirection, string
+        endclass
+
+        public class WindReport
+            public readwrite property Scale, string
+            public readwrite property CurrentValue, @WindData
+            public readwrite property NextTwelveHours, [#]@WindData
+            public method WindReport
+                record
+                    ix, int
+                endrecord
+            proc
+                CurrentValue = new WindData()
+                NextTwelveHours = new WindData[12]
+                for ix from 1 thru NextTwelveHours.Length
+                begin
+                    NextTwelveHours[ix] = new WindData()
+                end
+            endmethod
+        endclass
+
+        public readwrite property TimeOfReport, @Iso8601Time
+        public readwrite property Location,     @LocationData
+        public readwrite property Temperature,  @TemperatureReport
+        public readwrite property Humidity,     @HumidityReport
+        public readwrite property Wind,         @WindReport
+
+        public method WeatherReport
+        proc
+            TimeOfReport = new Iso8601Time()
+            Location = new LocationData()
+            Temperature = new TemperatureReport()
+            Humidity = new HumidityReport()
+            Wind = new WindReport()
+        endmethod
+
+        ;;; <summary>
+        ;;; Serialize a weather report.
+        ;;; In other words, convert a WeatherReport object into JSON data.
+        ;;; </summary>
+        ;;; <param name="report"></param>
+        ;;; <returns></returns>
+        public static method Serialize, string
+            required in report, @WeatherReport
+        proc
+            begin
+                data jsonBuffer = new StringBuilder()
+                data jsonWriter = Utf8JsonWriter.CreateUtf8JsonWriter(jsonBuffer)
+                data ix, int
+
+                ;;Start root object
+                jsonWriter.WriteStartObject()
+
+                ;;Timestamp
+                jsonWriter.WriteString("TimeOfReport", report.TimeOfReport.ToString())
+
+                ;;Location
+                jsonWriter.WriteStartObject("Location")
+                jsonWriter.WriteString("City", report.Location.City)
+                jsonWriter.WriteString("Region", report.Location.Region)
+                jsonWriter.WriteString("Country", report.Location.Country)
+                jsonWriter.WriteEndObject()
+
+                ;;Temperature
+                jsonWriter.WriteStartObject("Temperature")
+                jsonWriter.WriteString("Scale", report.Temperature.Scale)
+                jsonWriter.WriteNumber("CurrentValue", report.Temperature.CurrentValue)
+                jsonWriter.WriteStartArray("NextTwelveHours")
+                for ix from 1 thru 12
+                begin
+                    jsonWriter.WriteNumberValue(report.Temperature.NextTwelveHours[ix])
+                end
+                jsonWriter.WriteEndArray()
+                jsonWriter.WriteEndObject()
+
+                ;;Humidity
+                jsonWriter.WriteStartObject("Humidity")
+                jsonWriter.WriteString("Scale", report.Humidity.Scale)
+                jsonWriter.WriteNumber("CurrentValue", report.Humidity.CurrentValue)
+                jsonWriter.WriteStartArray("NextTwelveHours")
+                for ix from 1 thru 12
+                begin
+                    jsonWriter.WriteNumberValue(report.Humidity.NextTwelveHours[ix])
+                end
+                jsonWriter.WriteEndArray()
+                jsonWriter.WriteEndObject()
+
+                ;;Wind
+                jsonWriter.WriteStartObject("Wind")
+                jsonWriter.WriteString("SpeedScale", report.Wind.Scale)
+                jsonWriter.WriteStartObject("CurrentValue")
+                jsonWriter.WriteNumber("Speed", report.Wind.CurrentValue.Speed)
+                jsonWriter.WriteString("FromDirection", report.Wind.CurrentValue.FromDirection)
+                jsonWriter.WriteEndObject()
+                jsonWriter.WriteStartArray("NextTwelveHours")
+                for ix from 1 thru 12
+                begin
+                    jsonWriter.WriteStartObject()
+                    jsonWriter.WriteNumber("Speed", report.Wind.NextTwelveHours[ix].Speed)
+                    jsonWriter.WriteString("FromDirection", report.Wind.NextTwelveHours[ix].FromDirection)
+                    jsonWriter.WriteEndObject()
+                end
+                jsonWriter.WriteEndArray()
+                jsonWriter.WriteEndObject()
+
+                ;End of root object
+                jsonWriter.WriteEndObject()
+
+                jsonWriter.Flush()
+                jsonWriter.Reset()
+
+                mreturn jsonBuffer.ToString()
+            end
+        endmethod
+
+        ;;; <summary>
+        ;;; Deserialize a weather report.
+        ;;; In other words, translate JSON data into a WeatherReport object.
+        ;;; </summary>
+        public static method Deserialize, @WeatherReport
+            filename, string
+        proc
+            begin
+                data report = new WeatherReport()
+                data doc, @JsonDocument
+                data element, @JsonElement
+                data childElement, @JsonElement
+                data arrayLength, i4
+                data ix, i4
+                
+                doc = Parse(filename)
+
+                ;;TimeOfReport
+                element = doc.RootElement.GetProperty("TimeOfReport")
+                report.TimeOfReport = new Iso8601Time(element.GetString())
+
+                ;;Location
+                element = doc.RootElement.GetProperty("Location")
+                report.Location.City = element.GetProperty("City").GetString()
+                report.Location.Region = element.GetProperty("Region").GetString()
+                report.Location.Country = element.GetProperty("Country").GetString()
+
+                ;;Temperature
+                element = doc.RootElement.GetProperty("Temperature")
+
+                ;;Temperature Scale
+                try
+                begin
+                    report.Temperature.Scale = element.GetProperty("Scale").GetString()
+                    using report.Temperature.Scale.ToUpper() select
+                    ("FARENHEIT", "CELSIUS"),
+                        nop
+                    (),
+                        throw new BadJsonException("Value for Temperature.Scale must be FARENHEIT or CELSIUS!")
+                    endusing
+                end
+                catch (e, @InvalidOperationException)
+                begin
+                    throw new BadJsonException("Value for Temperature.Scale is not a string value!")
+                end
+                endtry
+ 
+                ;;Temperature.CurrentValue
+                try
+                begin
+                    report.Temperature.CurrentValue = element.GetProperty("CurrentValue").GetInt32()
+                end
+                catch (e, @InvalidOperationException)
+                begin
+                    throw new BadJsonException("Value for Temperature.CurrentValue is not an integer!")
+                end
+                endtry
+
+                ;;Temperature.NextTwelveHours
+                childElement = element.GetProperty("NextTwelveHours")
+
+                if (childElement.GetArrayLength()==12) then
+                begin
+                    for ix from 1 thru 12
+                    begin
+                        try
+                        begin
+                            report.Temperature.NextTwelveHours[ix] = childElement[ix-1].GetInt32()
+                        end
+                        catch (e, @InvalidOperationException)
+                        begin
+                            throw new BadJsonException("Value for Temperature.NextTwelveHours[" + %string(ix) + "] is not an integer!")
+                        end
+                        endtry
+                    end
+                end
+                else
+                begin
+                    throw new BadJsonException("Array Temperature.NextTwelveHours does not contain 12 elements!")
+                end
+
+                ;;Humidity
+                element = doc.RootElement.GetProperty("Humidity")
+
+
+                ;;Humidity.Scale
+                try
+                begin
+                    report.Humidity.Scale = element.GetProperty("Scale").GetString()
+                    using report.Humidity.Scale.ToUpper() select
+                    ("ABSOLUTE", "RELATIVE"),
+                        nop
+                    (),
+                        throw new BadJsonException("Value for Humidity.Scale must be ABSOLUTE or RELATIVE!")
+                    endusing
+                end
+                catch (e, @InvalidOperationException)
+                begin
+                    throw new BadJsonException("Value for Humidity.Scale is not a string value!")
+                end
+                endtry
+
+                ;;Humidity.CurrentValue
+                try
+                begin
+                    report.Humidity.CurrentValue = element.GetProperty("CurrentValue").GetInt32()
+                end
+                catch (e, @InvalidOperationException)
+                begin
+                    throw new BadJsonException("Value for Humidity.CurrentValue is not an integer value!")
+                end
+                endtry
+
+                ;;Humidity.NextTwelveHours
+                childElement = element.GetProperty("NextTwelveHours")
+
+                if (childElement.GetArrayLength()==12) then
+                begin
+                    for ix from 1 thru 12
+                    begin
+                        try
+                        begin
+                            report.Humidity.NextTwelveHours[ix] = childElement[ix-1].GetInt32()
+                        end
+                        catch (e, @InvalidOperationException)
+                        begin
+                            throw new BadJsonException("Value for Humidity.NextTwelveHours[" + %string(ix) + "] is not an integer!")
+                        end
+                        endtry
+                    end
+                end
+                else
+                begin
+                    throw new BadJsonException("Array Humidity.NextTwelveHours does not contain 12 elements!")
+                end
+
+                ;;Wind
+                element = doc.RootElement.GetProperty("Wind")
+
+                ;;Wind.Scale
+                report.Wind.Scale = element.GetProperty("SpeedScale").GetString()
+
+                ;;Wind.CurrentValue
+                childElement = element.GetProperty("CurrentValue")
+
+                ;;Wind.CurrentValue.Speed
+                report.Wind.CurrentValue.Speed = childElement.GetProperty("Speed").GetInt32()
+
+                ;;Wind.CurrentValue.FromDirection
+                report.Wind.CurrentValue.FromDirection = childElement.GetProperty("FromDirection").GetString()
+
+                ;;Wind.NextTwelveHours
+                childElement = element.GetProperty("NextTwelveHours")
+
+                if (childElement.GetArrayLength()==12) then
+                begin
+                    for ix from 1 thru 12
+                    begin
+
+                        report.Wind.NextTwelveHours[ix].Speed = childElement[ix-1].GetProperty("Speed").GetInt32()
+
+                        report.Wind.NextTwelveHours[ix].FromDirection = childElement[ix-1].GetProperty("FromDirection").GetString()
+                    end
+                end
+                else
+                begin
+                    throw new BadJsonException("Array Wind.NextTwelveHours does not contain 12 elements!")
+                end
+
+                mreturn report
+            end
+
+        endmethod
+
+        ;;; <summary>
+        ;;; Utility method to read in a file from disk and return that file
+        ;;; content parsed through JsonDocument.Parse
+        ;;; </summary>
+        ;;; <param name="filePath"></param>
+        ;;; <returns></returns>
+        public static method Parse, @JsonDocument
+            req in filePath, string
+            endparams
+
+            record
+                jsonFileContent, @StringBuilder
+                firstBrace, int
+                channel, int
+				buffer, a1024
+				plays,string
+            endrecord
+
+        proc
+            jsonFileContent = new StringBuilder()
+            open(channel = 0, I, filePath)
+
+            while (true)
+            begin
+                reads(channel, buffer, eof)
+                if (firstBrace < 1)
+                begin
+                    xcall instr(1, buffer, '{', firstBrace)
+                    if (firstBrace >= 1)
+                        buffer = buffer(firstBrace:1024-firstBrace)
+                end
+                jsonFileContent.Append(%atrim(buffer))
+                nextloop
+            eof,
+                jsonFileContent.Append(%atrim(buffer))
+                exitloop
+            end
+			close(channel)
+			plays=jsonFileContent.ToString()
+            mreturn JsonDocument.Parse(jsonFileContent.ToString())
+            
+        endmethod
+
+        public static method GetSampleData, @WeatherReport
+            record
+                report, @WeatherReport
+            endrecord
+        proc
+            report = new WeatherReport()
+
+            report.TimeOfReport = new Iso8601Time(new SynergyDateTime(%datetime))
+            report.Location.City = "Sacramento"
+            report.Location.Region = "CA"
+            report.Location.Country = "USA"
+
+            report.Temperature.Scale = "Farenheit"
+            report.Temperature.CurrentValue = 87
+            report.Temperature.NextTwelveHours[1] = 89
+            report.Temperature.NextTwelveHours[2] = 91
+            report.Temperature.NextTwelveHours[3] = 94
+            report.Temperature.NextTwelveHours[4] = 96
+            report.Temperature.NextTwelveHours[5] = 98
+            report.Temperature.NextTwelveHours[6] = 101
+            report.Temperature.NextTwelveHours[7] = 103
+            report.Temperature.NextTwelveHours[8] = 100
+            report.Temperature.NextTwelveHours[9] = 93
+            report.Temperature.NextTwelveHours[10] = 91
+            report.Temperature.NextTwelveHours[11] = 88
+            report.Temperature.NextTwelveHours[12] = 85
+
+            report.Humidity.Scale = "Relative"
+            report.Humidity.CurrentValue = 87
+            report.Humidity.NextTwelveHours[1] = 25
+            report.Humidity.NextTwelveHours[2] = 25
+            report.Humidity.NextTwelveHours[3] = 26
+            report.Humidity.NextTwelveHours[4] = 27
+            report.Humidity.NextTwelveHours[5] = 26
+            report.Humidity.NextTwelveHours[6] = 26
+            report.Humidity.NextTwelveHours[7] = 26
+            report.Humidity.NextTwelveHours[8] = 25
+            report.Humidity.NextTwelveHours[9] = 24
+            report.Humidity.NextTwelveHours[10] = 24
+            report.Humidity.NextTwelveHours[11] = 23
+            report.Humidity.NextTwelveHours[12] = 23
+
+            report.Wind.Scale = "MPH"
+            report.Wind.CurrentValue.Speed = 8
+            report.Wind.CurrentValue.FromDirection = "SE"
+            report.Wind.NextTwelveHours[1].Speed = 8
+            report.Wind.NextTwelveHours[1].FromDirection = "SE"
+            report.Wind.NextTwelveHours[2].Speed = 8
+            report.Wind.NextTwelveHours[2].FromDirection = "SSE"
+            report.Wind.NextTwelveHours[3].Speed = 9
+            report.Wind.NextTwelveHours[3].FromDirection = "SSE"
+            report.Wind.NextTwelveHours[4].Speed = 8
+            report.Wind.NextTwelveHours[4].FromDirection = "SE"
+            report.Wind.NextTwelveHours[5].Speed = 8
+            report.Wind.NextTwelveHours[5].FromDirection = "SSE"
+            report.Wind.NextTwelveHours[6].Speed = 5
+            report.Wind.NextTwelveHours[6].FromDirection = "SSE"
+            report.Wind.NextTwelveHours[7].Speed = 3
+            report.Wind.NextTwelveHours[7].FromDirection = "SE"
+            report.Wind.NextTwelveHours[8].Speed = 1
+            report.Wind.NextTwelveHours[8].FromDirection = "SSE"
+            report.Wind.NextTwelveHours[9].Speed = 1
+            report.Wind.NextTwelveHours[9].FromDirection = "SE"
+            report.Wind.NextTwelveHours[10].Speed = 2
+            report.Wind.NextTwelveHours[10].FromDirection = "SSE"
+            report.Wind.NextTwelveHours[11].Speed = 1
+            report.Wind.NextTwelveHours[11].FromDirection = "SSE"
+            report.Wind.NextTwelveHours[12].Speed = 3
+            report.Wind.NextTwelveHours[12].FromDirection = "SE"
+
+            mreturn report
+
+        endmethod
+
+    endclass
+
+endnamespace

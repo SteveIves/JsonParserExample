@@ -1,0 +1,142 @@
+
+namespace JsonParserExample
+
+    public class SynergyDateTime
+
+        private record mDateTime
+            mYear,          d4
+            mMonth,         d2
+            mDay,           d2
+            mHour,          d2
+            mMinute,        d2
+            mSecond,        d2
+            mMillisecond,   d3
+            mMicrosecond,   d3
+            ;Overlays
+            d8date,         d8 @mYear
+            d6date,         d6 @mYear
+            d6time,         d6 @mHour
+            d4time,         d4 @mHour
+        endrecord
+
+        public method SynergyDateTime
+        proc
+            mDateTime = %datetime
+        endmethod
+
+        public method SynergyDateTime
+            required in aDateTime, a20
+        proc
+            mDateTime = aDateTime
+        endmethod
+
+        public property Year, int
+            method get
+            proc
+                mreturn mDateTime.mYear
+            endmethod
+            method set
+            proc
+                mDateTime.mYear = value
+            endmethod
+        endproperty
+
+        public property Month, int
+            method get
+            proc
+                mreturn mDateTime.mMonth
+            endmethod
+            method set
+            proc
+                mDateTime.mMonth = value
+            endmethod
+        endproperty
+
+        public property Day, int
+            method get
+            proc
+                mreturn mDateTime.mDay
+            endmethod
+            method set
+            proc
+                mDateTime.mDay = value
+            endmethod
+        endproperty
+
+        public property Hour, int
+            method get
+            proc
+                mreturn mDateTime.mHour
+            endmethod
+            method set
+            proc
+                mDateTime.mHour = value
+            endmethod
+        endproperty
+
+        public property Minute, int
+            method get
+            proc
+                mreturn mDateTime.mMinute
+            endmethod
+            method set
+            proc
+                mDateTime.mMinute = value
+            endmethod
+        endproperty
+
+        public property Second, int
+            method get
+            proc
+                mreturn mDateTime.mSecond
+            endmethod
+            method set
+            proc
+                mDateTime.mSecond = value
+            endmethod
+        endproperty
+
+        public property Millisecond, int
+            method get
+            proc
+                mreturn mDateTime.mMillisecond
+            endmethod
+            method set
+            proc
+                mDateTime.mMillisecond = value
+            endmethod
+        endproperty
+
+        public override method ToString, string
+        proc
+            mreturn mDateTime
+        endmethod
+
+        public method ToIso8601Time, @Iso8601Time
+        proc
+            mreturn new Iso8601Time(this)
+        endmethod
+
+        public method ToYYMMDD, d6
+        proc
+            mreturn mDateTime.d6date
+        endmethod
+
+        public method ToYYYYMMDD, d8
+        proc
+            mreturn mDateTime.d8date
+        endmethod
+
+        public method ToHHMMSS, d6
+        proc
+            mreturn mDateTime.d6time
+        endmethod
+
+        public method ToHHMM, d4
+        proc
+            mreturn mDateTime.d4time
+        endmethod
+
+    endclass
+
+endnamespace

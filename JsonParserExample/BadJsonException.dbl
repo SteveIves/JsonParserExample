@@ -1,0 +1,14 @@
+namespace JsonParserExample
+
+	public class BadJsonException extends ApplicationException
+		
+        public method BadJsonException
+            required in ErrorMessage, string
+            parent(ErrorMessage)
+        proc
+
+        endmethod
+
+	endclass
+
+endnamespace

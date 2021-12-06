@@ -1,0 +1,180 @@
+
+namespace JsonParserExample
+
+    public class Iso8601Time
+
+        private record mIso8601Time
+            year,               d4
+            ,                   a1, "-"
+            month,              d2
+            ,                   a1, "-"
+            day,                d2
+            ,                   a1, "T"
+            hour,               d2
+            ,                   a1, ":"
+            minute,             d2
+            ,                   a1, ":"
+            second,             d2
+            ,                   a1, "."
+            millisecond,        d3
+            offsetPlusMinus,    a1
+            offsetHour,         d2
+            ,                   a1,":"
+            offsetMinute,       d2
+        endrecord
+
+        public method Iso8601Time
+        proc
+            init mIso8601Time
+        endmethod
+
+        public method Iso8601Time
+            required in aDateTime, @SynergyDateTime
+            record
+                offset, int
+            endrecord
+        proc
+            offset = %timezone
+
+            mIso8601Time.year = aDateTime.Year
+            mIso8601Time.month = aDateTime.Month
+            mIso8601Time.day = aDateTime.Day
+            mIso8601Time.hour = aDateTime.Hour
+            mIso8601Time.minute = aDateTime.Minute
+            mIso8601Time.second = aDateTime.Second
+            mIso8601Time.millisecond = aDateTime.Millisecond
+            mIso8601Time.offsetPlusMinus = offset >= 0 ? "+" : "-"
+
+            if (offset < 0)
+                offset *= -1
+
+            mIso8601Time.offsetHour = offset / 60
+            mIso8601Time.offsetMinute = offset - (this.offsetHour * 60)
+
+        endmethod
+
+        public method Iso8601Time
+            required in aIso8601Time, string
+        proc
+            mIso8601Time = aIso8601Time
+        endmethod
+
+        public property Year, int
+            method get
+            proc
+                mreturn mIso8601Time.year
+            endmethod
+            method set
+            proc
+                mIso8601Time.year = value
+            endmethod
+        endproperty
+
+        public property Month, int
+            method get
+            proc
+                mreturn mIso8601Time.month
+            endmethod
+            method set
+            proc
+                mIso8601Time.month = value
+            endmethod
+        endproperty
+
+        public property Day, int
+            method get
+            proc
+                mreturn mIso8601Time.day
+            endmethod
+            method set
+            proc
+                mIso8601Time.day = value
+            endmethod
+        endproperty
+
+        public property Hour, int
+            method get
+            proc
+                mreturn mIso8601Time.hour
+            endmethod
+            method set
+            proc
+                mIso8601Time.hour = value
+            endmethod
+        endproperty
+
+        public property Minute, int
+            method get
+            proc
+                mreturn mIso8601Time.minute
+            endmethod
+            method set
+            proc
+                mIso8601Time.minute = value
+            endmethod
+        endproperty
+
+        public property Second, int
+            method get
+            proc
+                mreturn mIso8601Time.second
+            endmethod
+            method set
+            proc
+                mIso8601Time.second = value
+            endmethod
+        endproperty
+
+        public property Millisecond, int
+            method get
+            proc
+                mreturn mIso8601Time.millisecond
+            endmethod
+            method set
+            proc
+                mIso8601Time.millisecond = value
+            endmethod
+        endproperty
+
+        public property OffsetPlusMinus, string
+            method get
+            proc
+                mreturn mIso8601Time.offsetPlusMinus
+            endmethod
+            method set
+            proc
+                mIso8601Time.offsetPlusMinus = value
+            endmethod
+        endproperty
+
+        public property OffsetHour, int
+            method get
+            proc
+                mreturn mIso8601Time.offsetHour
+            endmethod
+            method set
+            proc
+                mIso8601Time.offsetHour = value
+            endmethod
+        endproperty
+
+        public property OffsetMinute, int
+            method get
+            proc
+                mreturn mIso8601Time.offsetMinute
+            endmethod
+            method set
+            proc
+                mIso8601Time.offsetMinute = value
+            endmethod
+        endproperty
+
+        public override method ToString, string
+        proc
+            mreturn mIso8601Time
+        endmethod
+
+    endclass
+
+
+endnamespace

@@ -1,0 +1,73 @@
+;
+;This code creates and then parses the following JSON data defining a weather report
+;
+;{
+;	"TimeOfReport": "2021-10-26T12:51:56.321-08:00",
+;	"Location": {
+;		"City": "Sacramento",
+;		"Region": "CA",
+;		"Country": "USA"
+;	},
+;	"Temperature": {
+;		"Scale": "Farenheit",
+;		"CurrentValue": 87,
+;		"NextTwelveHours": [
+;			89, 91, 94, 96, 98, 101, 103, 100, 93, 91, 88, 85
+;		]
+;	},
+;	"Humidity": {
+;		"Scale": "Percent",
+;		"CurrentValue": 25,
+;		"NextTwelveHours": [
+;			25, 25, 26, 27, 26, 26, 26, 25, 24, 24, 23, 23
+;		]
+;	},
+;	"Wind": {
+;		"SpeedScale": "MPH",
+;		"CurrentValue": { "Speed": 8, "FromDirection": "SE"},
+;		"NextTwelveHours":
+;        [
+;           { "Speed": 8, "FromDirection": "SE" },
+;			{ "Speed": 8, "FromDirection": "SE" },
+;			{ "Speed": 9, "FromDirection": "SSE" },
+;			{ "Speed": 8, "FromDirection": "SSE" },
+;			{ "Speed": 8, "FromDirection": "SE" },
+;			{ "Speed": 5, "FromDirection": "SSE" },
+;			{ "Speed": 3, "FromDirection": "SE" },
+;			{ "Speed": 1, "FromDirection": "SSE" },
+;			{ "Speed": 1, "FromDirection": "SE" },
+;			{ "Speed": 2, "FromDirection": "SSE" },
+;			{ "Speed": 1, "FromDirection": "SSE" },
+;			{ "Speed": 3, "FromDirection": "SE" }
+;		]
+;	}
+;}
+
+import JsonParserExample
+
+main
+    record
+        channel, int
+        jsonData, string
+        report, @WeatherReport
+    endrecord
+proc
+
+    report = WeatherReport.GetSampleData()
+
+    jsonData = WeatherReport.Serialize(report)
+
+    open(channel=0,o:s,"TEMP:WeatherReport.json")
+    writes(channel,jsonData)
+    close channel
+
+    init report
+
+    report = WeatherReport.Deserialize("TEMP:WeatherReport.json")
+
+    Console.Write("Press ENTER to exit: ")
+    Console.ReadLine()
+
+endmain
+
+
