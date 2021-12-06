@@ -55,17 +55,6 @@
     <Compile Include="Program.dbl" />
     <Compile Include="Utilities.dbl" />
   </ItemGroup>
-  <ItemGroup>
-    <Content Include=".gitignore">
-      <SubType>Content</SubType>
-    </Content>
-    <Content Include="LICENSE">
-      <SubType>Content</SubType>
-    </Content>
-    <Content Include="README.md">
-      <SubType>Content</SubType>
-    </Content>
-  </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\Synergex\dbl\Synergex.SynergyDE.Traditional.targets" />
   <PropertyGroup>
     <PreBuildEvent>
